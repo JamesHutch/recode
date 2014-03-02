@@ -73,6 +73,8 @@ func recodeField(in, out reflect.Value) error {
 		return recodeStruct(in, out)
 	case reflect.Interface, reflect.Ptr:
 		return recodeField(in, out.Elem())
+	case reflect.Slice:
+		return recodeSlice(in, out)
 	default:
 		return fmt.Errorf("recode: Recode() cannot map to %v", out.Kind())
 	}
@@ -156,6 +158,24 @@ func recodeFloat(in, out reflect.Value) error {
 		out.SetFloat(float64(in.Int()))
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		out.SetFloat(float64(in.Uint()))
+	default:
+		return fmt.Errorf("recode: Recode() cannot map %v to %v", in.Kind(), out.Kind())
+	}
+	return nil
+}
+
+func recodeSlice(in, out reflect.Value) error {
+	switch in.Kind() {
+	case reflect.Slice:
+		out.Set(reflect.MakeSlice(out.Type(), in.Len(), in.Len()))
+		for i := 0; i < in.Len(); i++ {
+			err := recodeField(in.Index(i), out.Index(i))
+			if err != nil {
+				return err
+			}
+		}
+	case reflect.Interface, reflect.Ptr:
+		return recodeSlice(in.Elem(), out)
 	default:
 		return fmt.Errorf("recode: Recode() cannot map %v to %v", in.Kind(), out.Kind())
 	}
